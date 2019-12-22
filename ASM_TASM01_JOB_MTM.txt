@@ -1,0 +1,134 @@
+//MANNYM JOB  CLASS=A,NOTIFY=&SYSUID,MSGCLASS=X,MSGLEVEL=(1,1)
+//ASM    EXEC PROC=HLASMCLG                                             00030000
+//SYSIN  DD   *                                                         00040000
+         TITLE  'TASM01 - STATIC LINKAGE DEMO'                          00050000
+         PRINT  ON,NODATA,NOGEN                                         00060000
+******************************************************************      00070000
+*     REGISTER EQUATES                                           *      00140000
+******************************************************************      00160000
+R0       EQU   0                                                        00170000
+R1       EQU   1                                                        00180000
+R2       EQU   2                                                        00190000
+R3       EQU   3                                                        00200000
+R4       EQU   4                                                        00210000
+R5       EQU   5                                                        00220000
+R6       EQU   6                                                        00230000
+R7       EQU   7                                                        00240000
+R8       EQU   8                                                        00250000
+R9       EQU   9                                                        00260000
+R10      EQU   10                                                       00270000
+R11      EQU   11                                                       00280000
+R12      EQU   12                                                       00290000
+R13      EQU   13                                                       00300000
+R14      EQU   14                                                       00310000
+R15      EQU   15                                                       00320000
+******************************************************************      00330000
+*     SYMBOLIC EQUATES                                           *      00350000
+******************************************************************      00370000
+SINGLE   EQU   X'09'      WRITE AND SPACE 1                             00380000
+DOUBLE   EQU   X'11'      WRITE AND SPACE 2                             00390000
+******************************************************************      00410000
+ASMT04   CSECT                         STANDARD ENTRY CODE              00420000
+         STM   R14,R12,12(R13)         STORE REGS IN CALLER'S SAA       00430000
+         BASR  R12,R0                  ESTABLISH R12 AS BASE REG        00440000
+         USING *,R12                                                    00450000
+         ST    R13,SAVEAREA+4          SAVE CALLER'S SAA IN CURRENT SAA 00460000
+         LR    R2,R13                  COPY R13 TO R2 TEMPORARILY       00460000
+         LA    R13,SAVEAREA            LOAD R13 WITH CURRENT SAA        00460000
+         ST    R13,8(R0,R2)            STORE THIS SAA IN CALLER'S SAA   00460000
+******************************************************************      00480000
+* BEGIN THE PROGRAM LOGIC. FIRST OPEN THE INPUT AND OUTPUT FILES        00490000
+******************************************************************      00500000
+         OPEN  (PRINTER,(OUTPUT))                                       00510000
+         MVI   PRC1,DOUBLE             PREPARE TO DOUBLE SPACE HEADER   00530000
+         PUT   PRINTER,PRHEAD          PRINT THE HEADER                 00540000
+         MVI   PRC2,DOUBLE             PREPARE TO SINGLE SPACE REPORT   00560000
+         PUT   PRINTER,PRINTLN         PRINT THE HEADER                 00540000
+*                                                                       00570000
+* DISPLAY PACKED FIELDS                                                 00570000
+         MVI   PRCLN1,DOUBLE           DOUBLE SPACE LINE                00570000
+         UNPK  VALUE1(6),APK           CONVERT APK FROM PACKED TO ZONED 00570000
+         PUT   PRINTER,PRINTLN1        PRINT LINE TYPE 1                00540000
+*                                                                       00570000
+         MVI   PRCLN1,SINGLE           SINGLE SPACE LINE AFTERWARDS     00570000
+         MVC   VALUE1,VALUE1B          BLANK OUT VALUE1                 00570000
+         UNPK  VALUE1(3),BPK           MOVE 2 BYTES TO VALUE1           00570000
+         PUT   PRINTER,PRINTLN1        PRINT LINE TYPE 1                00540000
+*                                                                       00570000
+* NOTE: DONT NEED A SINGLE SPACE MOVE TO PRINT LINE; DONE ABOVE         00570000
+         MVC   VALUE1,VALUE1B          BLANK OUT VALUE1                 00570000
+         UNPK  VALUE1(5),CPK           MOVE 4 BYTES TO VALUE1           00570000
+         PUT   PRINTER,PRINTLN1        PRINT LINE TYPE 1                00540000
+*                                                                       00570000
+******************************************************************      00500000
+EXIT     EQU   *                                                        00680000
+         CLOSE (PRINTER)                                                00700000
+         L     R13,SAVEAREA+4          POINT AT OLD SAVE AREA           00710000
+         LM    R14,R12,12(R13)         RESTORE THE REGISTERS            00720000
+         LA    R15,0                   RETURN CODE = 0                  00730000
+         BR    R14                     RETURN TO OPERATING SYSTEM       00740000
+******************************************************************      00750000
+*     OUTPUT FILE - DATA CONTROL BLOCK                           *      00770000
+******************************************************************      00790000
+PRINTER  DCB   DSORG=PS,                                               X00800000
+               MACRF=(PM),                                             X00810000
+               DEVD=DA,                                                X00820000
+               DDNAME=PRINTER,                                         X00830000
+               RECFM=FM,                                               X00840000
+               LRECL=133                                                00850000
+******************************************************************      00980000
+*      STORAGE DEFINITIONS                                              01000000
+******************************************************************      01020000
+*      HEADER                                                           01100000
+******************************************************************      01120000
+PRHEAD   DS   0CL133                                                    01130000
+PRC1     DC    CL1' '              PRINT CONTROL                        01140000
+         DC    CL10' '                                                  01150000
+         DC    CL122'*** HLASM TESTING DS AND DC COMMANDS ***'          01160000
+******************************************************************      01180000
+*    OUTPUT RECORD AREA                                                 01200000
+******************************************************************      01220000
+PRINTLN  DS   0CL133              PRINT AREA                            01230000
+PRC2     DC    C' '               PRINT CONTROL CHARACTER               01240000
+         DC    CL10' '                                                  01250000
+DATAPR   DC    CL80'PRINTLN: DATAPR STARTS HERE'                        01260000
+         DC    CL42' '                                                  01270000
+******************************************************************      01180000
+*    OUTPUT RECORD AREA - PACKED DECIMAL FIELDS                         01200000
+******************************************************************      01220000
+PRINTLN1 DS   0CL133              PRINT AREA                            01230000
+PRCLN1   DC    C' '               PRINT CONTROL CHARACTER               01240000
+         DC    CL10' '                                                  01250000
+LABEL1   DC    CL25'PACKED DECIMAL FIELDS: '                            01260000
+VALUE1B  DC    C' '               1 BLANK TO RESET VALUE 1 AFTER EACH   01260000
+VALUE1   DC    CL44' '            MOVE TO VALUE1                        01260000
+         DC    CL42' '                                                  01270000
+******************************************************************      01220000
+*    DEFINE CONSTANT DC TESTING                                         01300000
+******************************************************************      01220000
+CATNAMEC DC    CL3'CAT'           C-TYPE LENGTH 3                       01300000
+CATNAMEX DC    XL3'C3C1E3'        X-TYPE LENGTH 3                       01300000
+                                                                        01300000
+REPLETR  DC    2C'A'                                                    01300000
+                                                                        01300000
+APK      DC    P'12345'           GENERATES 12345C                      01300000
+BPK      DC    PL2'12345'         TUNC LEFT   345C                      01300000
+CPK      DC    PL4'123.45'                0012345C                      01300000
+DPK      DC    P'-345'                        345D                      01300000
+EPK      DC    P'0'                             0C                      01300000
+FPK      DC    P'-1'                            1D                      01300000
+GPK      DC    PL3'54'                      00054C                      01300000
+******************************************************************      01280000
+*    REGISTER SAVE AREA                                                 01300000
+******************************************************************      01320000
+SAVEAREA DS  18F                                                        01330000
+******************************************************************      01340000
+*    LITERAL POOL                                                       01360000
+******************************************************************      01380000
+         LTORG *                                                        01390000
+         END   ASMT04                                                   01400000
+/*                                                                      01410000
+//G.SYSABOUT DD SYSOUT=*                                                01420000
+//G.SYSUDUMP DD SYSOUT=*                                                01430000
+//G.PRINTER DD SYSOUT=*                                                 01440000
+//                                                                      01510000
